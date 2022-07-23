@@ -438,8 +438,8 @@ type PlayerScoreRowWithComp struct {
 }
 
 type MaxRow struct {
-	Row           int64  `db:"newest"`
 	CompetitionID string `db:"competition_id"`
+	Row           int64  `db:"newest"`
 }
 
 // 排他ロックのためのファイル名を生成する
