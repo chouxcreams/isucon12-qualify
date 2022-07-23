@@ -1238,6 +1238,7 @@ func playerHandler(c echo.Context) error {
 	}
 	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
+
 	for _, c := range cs {
 		ps := PlayerScoreRow{}
 		if err := tenantDB.GetContext(
