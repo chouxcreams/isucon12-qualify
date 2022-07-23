@@ -1108,6 +1108,10 @@ func competitionScoreHandler(c echo.Context) error {
 		})
 	}
 
+	fl, err := flockByTenantID(v.tenantID)
+	if err != nil {
+		return fmt.Errorf("error flockByTenantID: %w", err)
+	}
 	if _, err := tenantDB.ExecContext(
 		ctx,
 		"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?",
@@ -1123,6 +1127,7 @@ func competitionScoreHandler(c echo.Context) error {
 	); err != nil {
 		return fmt.Errorf("error Insert player", err.Error())
 	}
+	fl.Close()
 
 	return c.JSON(http.StatusOK, SuccessResult{
 		Status: true,
@@ -1237,11 +1242,6 @@ func playerHandler(c echo.Context) error {
 	}
 
 	// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
-	fl, err := flockByTenantID(v.tenantID)
-	if err != nil {
-		return fmt.Errorf("error flockByTenantID: %w", err)
-	}
-	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
 
 	for _, c := range cs {
