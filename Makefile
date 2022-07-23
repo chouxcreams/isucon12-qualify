@@ -22,7 +22,7 @@ deploy:
 	bash ./scripts/deploy.sh
 
 pre-bench:
-	bash ./scripts/log-clear.sh
+	bash ./scripts/pre-bench.sh
 
 pull-all:
 	bash ./scripts/pull.sh
