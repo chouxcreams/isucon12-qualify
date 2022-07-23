@@ -1247,7 +1247,7 @@ func playerHandler(c echo.Context) error {
 		ctx,
 		&ps,
 		// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-		"SELECT c.title AS ctitle, ps.score AS ps.score FROM competition AS c JOIN player_score AS ps ON ps.competition_id = c.id JOIN (SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id) AS ps2 ON c.id = ps2.competition_id AND ps.row_num = ps2.newest WHERE ps.tenant_id = ?, ps.player_id",
+		"SELECT c.title AS ctitle, ps.score AS pscore FROM competition AS c JOIN player_score AS ps ON ps.competition_id = c.id JOIN (SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id) AS ps2 ON c.id = ps2.competition_id AND ps.row_num = ps2.newest WHERE ps.tenant_id = ?, ps.player_id",
 		v.tenantID,
 		p.ID,
 	); err != nil {
