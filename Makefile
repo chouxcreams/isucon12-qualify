@@ -5,6 +5,9 @@ up: # コンテナ起動
 down: # コンテナ停止
 	docker compose -f docker-compose-go.yml down
 
+ps: # コンテナ状態
+	docker compose -f docker-compose-go.yml ps
+
 pull: # git pull
 	git checkout master && git pull origin master
 
