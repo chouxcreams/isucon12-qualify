@@ -1,6 +1,6 @@
 ## サーバー内で実行するやつ
 up: # コンテナ起動
-	docker compose -f docker-compose-go.yml up --build -d
+	docker compose -f docker-compose-go.yml up -d
 
 down: # コンテナ停止
 	docker compose -f docker-compose-go.yml down
