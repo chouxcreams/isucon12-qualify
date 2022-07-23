@@ -189,7 +189,9 @@ func Run() {
 		e.Logger.Fatalf("failed to connect db: %v", err)
 		return
 	}
-	adminDB.SetMaxOpenConns(10)
+
+	// コネクション数を制限する必要が無いのでコメントアウト
+	//adminDB.SetMaxOpenConns(10)
 	defer adminDB.Close()
 
 	port := getEnv("SERVER_APP_PORT", "3000")
