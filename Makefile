@@ -26,3 +26,6 @@ pre-bench:
 
 pull-all:
 	bash ./scripts/pull.sh
+
+health:
+	ssh isucon12-1 "cd webapp && make ps"
