@@ -1258,7 +1258,7 @@ func playerHandler(c echo.Context) error {
 		v.tenantID,
 		p.ID,
 	); err != nil {
-		return fmt.Errorf("error Select player_score: tenantID=%d, playerID=%s, %w", v.tenantID, p.ID, err)
+		return fmt.Errorf("error Select hoge: tenantID=%d, playerID=%s, %w", v.tenantID, p.ID, err)
 	}
 	fmt.Errorf("error Select player_score: length=%d, playerID=%s, %w", maxRow.Row, p.ID, err)
 
