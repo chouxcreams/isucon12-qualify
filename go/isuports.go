@@ -650,7 +650,7 @@ func tenantsBillingHandler(c echo.Context) error {
 	}
 
 	before := c.QueryParam("before")
-	var beforeID int64
+	var beforeID int64 = 9223372036854775807
 	if before != "" {
 		var err error
 		beforeID, err = strconv.ParseInt(before, 10, 64)
@@ -668,7 +668,7 @@ func tenantsBillingHandler(c echo.Context) error {
 	//   を合計したものを
 	// テナントの課金とする
 	ts := []TenantRow{}
-	if err := adminDB.SelectContext(ctx, &ts, "SELECT * FROM tenant ORDER BY id DESC"); err != nil {
+	if err := adminDB.SelectContext(ctx, &ts, "SELECT * FROM tenant WHERE id < ? ORDER BY id DESC LIMIT 10", beforeID); err != nil {
 		return fmt.Errorf("error Select tenant: %w", err)
 	}
 	tenantBillings := make([]TenantWithBilling, 0, len(ts))
