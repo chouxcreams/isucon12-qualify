@@ -431,11 +431,6 @@ type PlayerScoreRow struct {
 	UpdatedAt     int64  `db:"updated_at"`
 }
 
-type PlayerScoreRowWithComp struct {
-	Title string `db:"ctitle"`
-	Score int64  `db:"pscore"`
-}
-
 // 排他ロックのためのファイル名を生成する
 func lockFilePath(id int64) string {
 	tenantDBDir := getEnv("ISUCON_TENANT_DB_DIR", "../tenant_db")
@@ -1242,22 +1237,26 @@ func playerHandler(c echo.Context) error {
 	}
 	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
-	ps := []PlayerScoreRowWithComp{}
-	if err := tenantDB.GetContext(
-		ctx,
-		&ps,
-		// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-		"SELECT c.title AS ctitle, ps.score AS ps.score FROM competition AS c JOIN player_score AS ps ON ps.competition_id = c.id JOIN (SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id) AS ps2 ON c.id = ps2.competition_id AND ps.row_num = ps2.newest WHERE ps.tenant_id = ?, ps.player_id",
-		v.tenantID,
-		p.ID,
-	); err != nil {
-		return fmt.Errorf("error Select player_score: tenantID=%d, playerID=%s, %w", v.tenantID, p.ID, err)
-	}
-	for _, s := range ps {
-
+	for _, c := range cs {
+		ps := PlayerScoreRow{}
+		if err := tenantDB.GetContext(
+			ctx,
+			&ps,
+			// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
+			"SELECT * FROM player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ? ORDER BY row_num DESC LIMIT 1",
+			v.tenantID,
+			c.ID,
+			p.ID,
+		); err != nil {
+			// 行がない = スコアが記録されてない
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, playerID=%s, %w", v.tenantID, c.ID, p.ID, err)
+		}
 		psds = append(psds, PlayerScoreDetail{
-			CompetitionTitle: s.Title,
-			Score:            s.Score,
+			CompetitionTitle: c.Title,
+			Score:            ps.Score,
 		})
 	}
 
