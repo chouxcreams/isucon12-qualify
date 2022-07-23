@@ -13,3 +13,7 @@ apply: # 最新を適用
 
 log-clear: # ログ消去
 	echo > /var/log/mysql/mysql-slow.log && echo > /var/log/nginx/access.log
+
+## ローカルで実行するやつ
+deploy:
+	bash ./go/deploy.sh
