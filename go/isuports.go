@@ -156,6 +156,8 @@ func Run() {
 	defer sqlLogger.Close()
 
 	e.Use(middleware.Logger())
+	e.Logger.SetLevel(log.OFF)
+
 	e.Use(middleware.Recover())
 	e.Use(SetCacheControlPrivate)
 
