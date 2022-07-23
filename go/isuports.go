@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -432,9 +431,9 @@ type PlayerScoreRow struct {
 }
 
 type SimplePlayerScoreRow struct {
-	PlayerID string `db:"player_id"`
+	PlayerID          string `db:"player_id"`
 	PlayerDisplayName string `db:"display_name"`
-	Score    int64  `db:"max_score"`
+	Score             int64  `db:"max_score"`
 }
 
 // 排他ロックのためのファイル名を生成する
@@ -1374,7 +1373,7 @@ func competitionRankingHandler(c echo.Context) error {
 		v.tenantID,
 		competitionID,
 	); err != nil {
-		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
+		return fmt.Errorf("error Select player_score: competitionID=%s, %w", competitionID, err)
 	}
 	ranks := make([]CompetitionRank, 0, len(pss))
 	scoredPlayerSet := make(map[string]struct{}, len(pss))
