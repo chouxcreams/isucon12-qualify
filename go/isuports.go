@@ -421,15 +421,20 @@ func retrieveCompetition(ctx context.Context, tenantDB dbOrTx, id string) (*Comp
 }
 
 type PlayerScoreRow struct {
-	TenantID      int64     `db:"tenant_id"`
-	ID            string    `db:"id"`
-	PlayerID      string    `db:"player_id"`
-	CompetitionID string    `db:"competition_id"`
-	Score         int64     `db:"score"`
-	RowNum        int64     `db:"row_num"`
-	CreatedAt     int64     `db:"created_at"`
-	UpdatedAt     int64     `db:"updated_at"`
-	Player        PlayerRow `db:"player"`
+	TenantID      int64  `db:"tenant_id"`
+	ID            string `db:"id"`
+	PlayerID      string `db:"player_id"`
+	CompetitionID string `db:"competition_id"`
+	Score         int64  `db:"score"`
+	RowNum        int64  `db:"row_num"`
+	CreatedAt     int64  `db:"created_at"`
+	UpdatedAt     int64  `db:"updated_at"`
+}
+
+type SimplePlayerScoreRow struct {
+	PlayerID string `db:"player_id"`
+	PlayerDisplayName string `db:"display_name"`
+	Score    int64  `db:"max_score"`
 }
 
 // 排他ロックのためのファイル名を生成する
@@ -1361,43 +1366,35 @@ func competitionRankingHandler(c echo.Context) error {
 		return fmt.Errorf("error flockByTenantID: %w", err)
 	}
 	defer fl.Close()
-	pss := []PlayerScoreRow{}
-
-	q := `SELECT ps.* , p.tenant_id "player.tenant_id", p.id "player.id", p.display_name "player.display_name", p.is_disqualified "player.is_disqualified", p.created_at "player.created_at", p.updated_at "player.updated_at" FROM player_score as ps INNER JOIN player as p ON ps.player_id = p.id WHERE ps.tenant_id = ? AND ps.competition_id = ? ORDER BY ps.row_num DESC`
+	pss := []SimplePlayerScoreRow{}
 	if err := tenantDB.SelectContext(
 		ctx,
 		&pss,
-		q,
+		"SELECT player_id, display_name, max(score) as max_score FROM player_score as ps INNER JOIN player as p ON ps.player_id = p.id WHERE tenant_id = ? AND competition_id = ? group by player_id order by max_score desc",
 		v.tenantID,
 		competitionID,
 	); err != nil {
-		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
+		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
 	}
 	ranks := make([]CompetitionRank, 0, len(pss))
 	scoredPlayerSet := make(map[string]struct{}, len(pss))
+
 	for _, ps := range pss {
-		// player_scoreが同一player_id内ではrow_numの降順でソートされているので
-		// 現れたのが2回目以降のplayer_idはより大きいrow_numでスコアが出ているとみなせる
-		if _, ok := scoredPlayerSet[ps.PlayerID]; ok {
-			continue
-		}
 		scoredPlayerSet[ps.PlayerID] = struct{}{}
-		if err != nil {
-			return fmt.Errorf("error retrievePlayer: %w", err)
-		}
 		ranks = append(ranks, CompetitionRank{
 			Score:             ps.Score,
-			PlayerID:          ps.Player.ID,
-			PlayerDisplayName: ps.Player.DisplayName,
-			RowNum:            ps.RowNum,
+			PlayerID:          ps.PlayerID,
+			PlayerDisplayName: ps.PlayerDisplayName,
 		})
 	}
-	sort.Slice(ranks, func(i, j int) bool {
-		if ranks[i].Score == ranks[j].Score {
-			return ranks[i].RowNum < ranks[j].RowNum
-		}
-		return ranks[i].Score > ranks[j].Score
-	})
+
+	//sort.Slice(ranks, func(i, j int) bool {
+	//	if ranks[i].Score == ranks[j].Score {
+	//		return ranks[i].RowNum < ranks[j].RowNum
+	//	}
+	//	return ranks[i].Score > ranks[j].Score
+	//})
+
 	pagedRanks := make([]CompetitionRank, 0, 100)
 	for i, rank := range ranks {
 		if int64(i) < rankAfter {
