@@ -555,55 +555,55 @@ type VisitHistorySummaryRow struct {
 // 大会ごとの課金レポートを計算する
 func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID int64, competitonID string) (*BillingReport, error) {
 	comp, err := retrieveCompetition(ctx, tenantDB, competitonID)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieveCompetition: %w", err)
-	}
-
-	// ランキングにアクセスした参加者のIDを取得する
-	vhs := []VisitHistorySummaryRow{}
-	if err := adminDB.SelectContext(
-		ctx,
-		&vhs,
-		"SELECT player_id, MIN(created_at) AS min_created_at FROM visit_history WHERE tenant_id = ? AND competition_id = ? GROUP BY player_id",
-		tenantID,
-		comp.ID,
-	); err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("error Select visit_history: tenantID=%d, competitionID=%s, %w", tenantID, comp.ID, err)
-	}
-	billingMap := map[string]string{}
-	for _, vh := range vhs {
-		// competition.finished_atよりもあとの場合は、終了後に訪問したとみなして大会開催内アクセス済みとみなさない
-		if comp.FinishedAt.Valid && comp.FinishedAt.Int64 < vh.MinCreatedAt {
-			continue
-		}
-		billingMap[vh.PlayerID] = "visitor"
-	}
-
-	// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
-	fl, err := flockByTenantID(tenantID)
-	if err != nil {
-		return nil, fmt.Errorf("error flockByTenantID: %w", err)
-	}
-	defer fl.Close()
-
-	// スコアを登録した参加者のIDを取得する
-	scoredPlayerIDs := []string{}
-	if err := tenantDB.SelectContext(
-		ctx,
-		&scoredPlayerIDs,
-		"SELECT DISTINCT(player_id) FROM player_score WHERE tenant_id = ? AND competition_id = ?",
-		tenantID, comp.ID,
-	); err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("error Select count player_score: tenantID=%d, competitionID=%s, %w", tenantID, competitonID, err)
-	}
-	for _, pid := range scoredPlayerIDs {
-		// スコアが登録されている参加者
-		billingMap[pid] = "player"
-	}
-
-	// 大会が終了している場合のみ請求金額が確定するので計算する
 	var playerCount, visitorCount int64
+	// 大会が終了している場合のみ請求金額が確定するので計算する
 	if comp.FinishedAt.Valid {
+		if err != nil {
+			return nil, fmt.Errorf("error retrieveCompetition: %w", err)
+		}
+
+		// ランキングにアクセスした参加者のIDを取得する
+		vhs := []VisitHistorySummaryRow{}
+		if err := adminDB.SelectContext(
+			ctx,
+			&vhs,
+			"SELECT player_id, MIN(created_at) AS min_created_at FROM visit_history WHERE tenant_id = ? AND competition_id = ? GROUP BY player_id",
+			tenantID,
+			comp.ID,
+		); err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("error Select visit_history: tenantID=%d, competitionID=%s, %w", tenantID, comp.ID, err)
+		}
+		billingMap := map[string]string{}
+		for _, vh := range vhs {
+			// competition.finished_atよりもあとの場合は、終了後に訪問したとみなして大会開催内アクセス済みとみなさない
+			if comp.FinishedAt.Valid && comp.FinishedAt.Int64 < vh.MinCreatedAt {
+				continue
+			}
+			billingMap[vh.PlayerID] = "visitor"
+		}
+
+		// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
+		fl, err := flockByTenantID(tenantID)
+		if err != nil {
+			return nil, fmt.Errorf("error flockByTenantID: %w", err)
+		}
+		defer fl.Close()
+
+		// スコアを登録した参加者のIDを取得する
+		scoredPlayerIDs := []string{}
+		if err := tenantDB.SelectContext(
+			ctx,
+			&scoredPlayerIDs,
+			"SELECT DISTINCT(player_id) FROM player_score WHERE tenant_id = ? AND competition_id = ?",
+			tenantID, comp.ID,
+		); err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("error Select count player_score: tenantID=%d, competitionID=%s, %w", tenantID, competitonID, err)
+		}
+		for _, pid := range scoredPlayerIDs {
+			// スコアが登録されている参加者
+			billingMap[pid] = "player"
+		}
+
 		for _, category := range billingMap {
 			switch category {
 			case "player":
@@ -613,6 +613,7 @@ func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID i
 			}
 		}
 	}
+
 	return &BillingReport{
 		CompetitionID:     comp.ID,
 		CompetitionTitle:  comp.Title,
@@ -655,7 +656,7 @@ func tenantsBillingHandler(c echo.Context) error {
 	}
 
 	before := c.QueryParam("before")
-	var beforeID int64
+	var beforeID int64 = 9223372036854775807
 	if before != "" {
 		var err error
 		beforeID, err = strconv.ParseInt(before, 10, 64)
@@ -673,7 +674,7 @@ func tenantsBillingHandler(c echo.Context) error {
 	//   を合計したものを
 	// テナントの課金とする
 	ts := []TenantRow{}
-	if err := adminDB.SelectContext(ctx, &ts, "SELECT * FROM tenant ORDER BY id DESC"); err != nil {
+	if err := adminDB.SelectContext(ctx, &ts, "SELECT * FROM tenant WHERE id < ? ORDER BY id DESC LIMIT 10", beforeID); err != nil {
 		return fmt.Errorf("error Select tenant: %w", err)
 	}
 	tenantBillings := make([]TenantWithBilling, 0, len(ts))
