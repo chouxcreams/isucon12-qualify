@@ -19,8 +19,7 @@ analyze: # リクエスト分析
 
 ## ローカルで実行するやつ
 deploy:
-	bash ./go/deploy.sh
-
+	bash ./scripts/deploy.sh
 
 pre-bench:
 	bash ./scripts/log-clear.sh
