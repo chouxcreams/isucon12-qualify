@@ -1233,6 +1233,8 @@ func playerHandler(c echo.Context) error {
 		return fmt.Errorf("error Select competition: %w", err)
 	}
 
+	psds := make([]PlayerScoreDetail, 0, len(cs))
+
 	for _, c := range cs {
 		ps := PlayerScoreRow{}
 		if err := tenantDB.GetContext(
