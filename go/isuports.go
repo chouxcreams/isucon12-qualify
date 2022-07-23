@@ -1244,7 +1244,7 @@ func playerHandler(c echo.Context) error {
 	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
 	ps := []PlayerScoreRowWithComp{}
-	if err := tenantDB.GetContext(
+	if err := tenantDB.SelectContext(
 		ctx,
 		&ps,
 		// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
