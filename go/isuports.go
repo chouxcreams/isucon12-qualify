@@ -429,7 +429,7 @@ type PlayerScoreRow struct {
 	RowNum        int64     `db:"row_num"`
 	CreatedAt     int64     `db:"created_at"`
 	UpdatedAt     int64     `db:"updated_at"`
-	Player        PlayerRow `db:player`
+	Player        PlayerRow `db:"player"`
 }
 
 type PlayerScoreRowWithComp struct {
