@@ -13,4 +13,4 @@ jobs:
           go-version: ^1.17
 
       - name: build
-        run: go mod init && go build
+        run: cd go && go build
