@@ -437,6 +437,11 @@ type PlayerScoreRowWithComp struct {
 	Score int64  `db:"pscore"`
 }
 
+type MaxRow struct {
+	Row           int64  `db:"newest"`
+	CompetitionID string `db:"competition_id"`
+}
+
 // 排他ロックのためのファイル名を生成する
 func lockFilePath(id int64) string {
 	tenantDBDir := getEnv("ISUCON_TENANT_DB_DIR", "../tenant_db")
@@ -1244,6 +1249,19 @@ func playerHandler(c echo.Context) error {
 	}
 	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
+	maxRow := MaxRow{}
+	if err := tenantDB.SelectContext(
+		ctx,
+		&maxRow,
+		// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
+		"SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id WHERE ps.tenant_id = ? AND ps.player_id = ?",
+		v.tenantID,
+		p.ID,
+	); err != nil {
+		return fmt.Errorf("error Select player_score: tenantID=%d, playerID=%s, %w", v.tenantID, p.ID, err)
+	}
+	fmt.Errorf("error Select player_score: length=%d, playerID=%s, %w", maxRow.Row, p.ID, err)
+
 	ps := []PlayerScoreRowWithComp{}
 	if err := tenantDB.SelectContext(
 		ctx,
