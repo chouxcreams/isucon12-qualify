@@ -49,6 +49,8 @@ var (
 	sqliteDriverName = "sqlite3"
 
 	jwkKey jwt.SignEncryptParseOption
+
+	baseHost string
 )
 
 // 環境変数を取得する、なければデフォルト値を返す
@@ -209,6 +211,9 @@ func Run() {
 	}
 	jwkKey = jwt.WithKey(jwa.RS256, jwkPem)
 
+	// JWTに入っているテナント名とHostヘッダのテナント名が一致しているか確認
+	baseHost = getEnv("ISUCON_BASE_HOSTNAME", ".t.isucon.dev")
+
 	port := getEnv("SERVER_APP_PORT", "3000")
 	e.Logger.Infof("starting isuports server on : %s ...", port)
 	serverPort := fmt.Sprintf(":%s", port)
@@ -326,8 +331,6 @@ func parseViewer(c echo.Context) (*Viewer, error) {
 }
 
 func retrieveTenantRowFromHeader(c echo.Context) (*TenantRow, error) {
-	// JWTに入っているテナント名とHostヘッダのテナント名が一致しているか確認
-	baseHost := getEnv("ISUCON_BASE_HOSTNAME", ".t.isucon.dev")
 	tenantName := strings.TrimSuffix(c.Request().Host, baseHost)
 
 	// SaaS管理者用ドメイン
