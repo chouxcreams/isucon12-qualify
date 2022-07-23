@@ -1254,7 +1254,7 @@ func playerHandler(c echo.Context) error {
 		ctx,
 		&maxRow,
 		// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-		"SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id WHERE ps.tenant_id = ? AND ps.player_id = ?",
+		"SELECT competition_id, MAX(row_num) AS newest FROM player_score GROUP BY competition_id WHERE tenant_id = ? AND player_id = ?",
 		v.tenantID,
 		p.ID,
 	); err != nil {
