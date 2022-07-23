@@ -550,6 +550,7 @@ type VisitHistorySummaryRow struct {
 // 大会ごとの課金レポートを計算する
 func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID int64, competitonID string) (*BillingReport, error) {
 	comp, err := retrieveCompetition(ctx, tenantDB, competitonID)
+	var playerCount, visitorCount int64
 	// 大会が終了している場合のみ請求金額が確定するので計算する
 	if comp.FinishedAt.Valid {
 		if err != nil {
@@ -598,7 +599,6 @@ func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID i
 			billingMap[pid] = "player"
 		}
 
-		var playerCount, visitorCount int64
 		for _, category := range billingMap {
 			switch category {
 			case "player":
