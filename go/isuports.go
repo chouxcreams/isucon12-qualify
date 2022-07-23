@@ -421,15 +421,14 @@ func retrieveCompetition(ctx context.Context, tenantDB dbOrTx, id string) (*Comp
 }
 
 type PlayerScoreRow struct {
-	TenantID      int64     `db:"tenant_id"`
-	ID            string    `db:"id"`
-	PlayerID      string    `db:"player_id"`
-	CompetitionID string    `db:"competition_id"`
-	Score         int64     `db:"score"`
-	RowNum        int64     `db:"row_num"`
-	CreatedAt     int64     `db:"created_at"`
-	UpdatedAt     int64     `db:"updated_at"`
-	Player        PlayerRow `db:"player"`
+	TenantID      int64  `db:"tenant_id"`
+	ID            string `db:"id"`
+	PlayerID      string `db:"player_id"`
+	CompetitionID string `db:"competition_id"`
+	Score         int64  `db:"score"`
+	RowNum        int64  `db:"row_num"`
+	CreatedAt     int64  `db:"created_at"`
+	UpdatedAt     int64  `db:"updated_at"`
 }
 
 type PlayerScoreRowWithComp struct {
@@ -1365,12 +1364,10 @@ func competitionRankingHandler(c echo.Context) error {
 	}
 	defer fl.Close()
 	pss := []PlayerScoreRow{}
-
-	q := `SELECT ps.* , p.tenant_id "player.tenant_id", p.id "player.id", p.display_name "player.display_name", p.is_disqualified "player.is_disqualified", p.created_at "player.created_at", p.updated_at "player.updated_at" FROM player_score as ps INNER JOIN player as p ON ps.player_id = p.id WHERE ps.tenant_id = ? AND ps.competition_id = ? ORDER BY ps.row_num DESC`
 	if err := tenantDB.SelectContext(
 		ctx,
 		&pss,
-		q,
+		"SELECT * FROM player_score WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC",
 		v.tenantID,
 		competitionID,
 	); err != nil {
@@ -1385,13 +1382,14 @@ func competitionRankingHandler(c echo.Context) error {
 			continue
 		}
 		scoredPlayerSet[ps.PlayerID] = struct{}{}
+		p, err := retrievePlayer(ctx, tenantDB, ps.PlayerID)
 		if err != nil {
 			return fmt.Errorf("error retrievePlayer: %w", err)
 		}
 		ranks = append(ranks, CompetitionRank{
 			Score:             ps.Score,
-			PlayerID:          ps.Player.ID,
-			PlayerDisplayName: ps.Player.DisplayName,
+			PlayerID:          p.ID,
+			PlayerDisplayName: p.DisplayName,
 			RowNum:            ps.RowNum,
 		})
 	}
