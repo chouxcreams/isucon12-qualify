@@ -17,3 +17,10 @@ log-clear: # ログ消去
 ## ローカルで実行するやつ
 deploy:
 	bash ./go/deploy.sh
+
+
+pre-bench:
+	bash ./scripts/log-clear.sh
+
+pull-all:
+	bash ./scripts/pull.sh
