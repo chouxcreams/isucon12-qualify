@@ -1103,7 +1103,6 @@ func competitionScoreHandler(c echo.Context) error {
 	if err != nil {
 		return fmt.Errorf("error flockByTenantID: %w", err)
 	}
-	defer fl.Close()
 
 	if _, err := tenantDB.ExecContext(
 		ctx,
@@ -1120,6 +1119,7 @@ func competitionScoreHandler(c echo.Context) error {
 	); err != nil {
 		return fmt.Errorf("error Insert player", err.Error())
 	}
+	fl.Close()
 
 	return c.JSON(http.StatusOK, SuccessResult{
 		Status: true,
