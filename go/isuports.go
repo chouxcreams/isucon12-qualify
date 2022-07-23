@@ -1351,17 +1351,17 @@ func competitionRankingHandler(c echo.Context) error {
 	}
 
 	now := time.Now().Unix()
-	//var tenant TenantRow
-	//if err := adminDB.GetContext(ctx, &tenant, "SELECT * FROM tenant WHERE id = ?", v.tenantID); err != nil {
-	//	return fmt.Errorf("error Select tenant: id=%d, %w", v.tenantID, err)
-	//}
+	var tenant TenantRow
+	if err := adminDB.GetContext(ctx, &tenant, "SELECT * FROM tenant WHERE id = ?", v.tenantID); err != nil {
+		return fmt.Errorf("error Select tenant: id=%d, %w", v.tenantID, err)
+	}
 
 	go func() {
 		// 書き込み結果は不要なのでgorotineで実行する
 		if _, err := adminDB.ExecContext(
 			ctx,
 			"INSERT INTO visit_history (player_id, tenant_id, competition_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-			v.playerID, v.tenantID, competitionID, now, now,
+			v.playerID, tenant.ID, competitionID, now, now,
 		); err != nil {
 			fmt.Errorf(
 				"error Insert visit_history: playerID=%s, tenantID=%d, competitionID=%s, createdAt=%d, updatedAt=%d, %w",
@@ -1389,7 +1389,7 @@ func competitionRankingHandler(c echo.Context) error {
 		ctx,
 		&pss,
 		"SELECT * FROM player_score INNER JOIN player ON player_score.player_id = player.id WHERE tenant_id = ? AND competition_id = ? ORDER BY row_num DESC",
-		v.tenantID,
+		tenant.ID,
 		competitionID,
 	); err != nil {
 		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
