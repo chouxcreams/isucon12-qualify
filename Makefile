@@ -19,4 +19,10 @@ analyze: # リクエスト分析
 
 ## ローカルで実行するやつ
 deploy:
-	bash ./go/deploy.sh
+	bash ./scripts/deploy.sh
+
+pre-bench:
+	bash ./scripts/pre-bench.sh
+
+pull-all:
+	bash ./scripts/pull.sh
