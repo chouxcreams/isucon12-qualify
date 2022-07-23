@@ -433,6 +433,7 @@ type PlayerScoreRow struct {
 
 type SimplePlayerScoreRow struct {
 	PlayerID string `db:"player_id"`
+	PlayerDisplayName string `db:"display_name"`
 	Score    int64  `db:"max_score"`
 }
 
@@ -1243,6 +1244,7 @@ func playerHandler(c echo.Context) error {
 	}
 	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
+
 	for _, c := range cs {
 		ps := PlayerScoreRow{}
 		if err := tenantDB.GetContext(
@@ -1331,21 +1333,24 @@ func competitionRankingHandler(c echo.Context) error {
 	}
 
 	now := time.Now().Unix()
-	var tenant TenantRow
-	if err := adminDB.GetContext(ctx, &tenant, "SELECT * FROM tenant WHERE id = ?", v.tenantID); err != nil {
-		return fmt.Errorf("error Select tenant: id=%d, %w", v.tenantID, err)
-	}
+	//var tenant TenantRow
+	//if err := adminDB.GetContext(ctx, &tenant, "SELECT * FROM tenant WHERE id = ?", v.tenantID); err != nil {
+	//	return fmt.Errorf("error Select tenant: id=%d, %w", v.tenantID, err)
+	//}
 
-	if _, err := adminDB.ExecContext(
-		ctx,
-		"INSERT INTO visit_history (player_id, tenant_id, competition_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-		v.playerID, tenant.ID, competitionID, now, now,
-	); err != nil {
-		return fmt.Errorf(
-			"error Insert visit_history: playerID=%s, tenantID=%d, competitionID=%s, createdAt=%d, updatedAt=%d, %w",
-			v.playerID, tenant.ID, competitionID, now, now, err,
-		)
-	}
+	// 結果が不要なのでgorotineで投げる
+	go func() {
+		if _, err := adminDB.ExecContext(
+			ctx,
+			"INSERT INTO visit_history (player_id, tenant_id, competition_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+			v.playerID, v.tenantID, competitionID, now, now,
+		); err != nil {
+			fmt.Errorf(
+				"error Insert visit_history: playerID=%s, tenantID=%d, competitionID=%s, createdAt=%d, updatedAt=%d, %w",
+				v.playerID, v.tenantID, competitionID, now, now, err,
+			)
+		}
+	}()
 
 	var rankAfter int64
 	rankAfterStr := c.QueryParam("rank_after")
@@ -1365,8 +1370,8 @@ func competitionRankingHandler(c echo.Context) error {
 	if err := tenantDB.SelectContext(
 		ctx,
 		&pss,
-		"SELECT player_id, max(score) as max_score FROM player_score WHERE tenant_id = ? AND competition_id = ? group by player_id order by max_score desc",
-		tenant.ID,
+		"SELECT player_id, display_name, max(score) as max_score FROM player_score as ps INNER JOIN player as p ON ps.player_id = p.id WHERE tenant_id = ? AND competition_id = ? group by player_id order by max_score desc",
+		v.tenantID,
 		competitionID,
 	); err != nil {
 		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
@@ -1376,14 +1381,10 @@ func competitionRankingHandler(c echo.Context) error {
 
 	for _, ps := range pss {
 		scoredPlayerSet[ps.PlayerID] = struct{}{}
-		p, err := retrievePlayer(ctx, tenantDB, ps.PlayerID)
-		if err != nil {
-			return fmt.Errorf("error retrievePlayer: %w", err)
-		}
 		ranks = append(ranks, CompetitionRank{
 			Score:             ps.Score,
-			PlayerID:          p.ID,
-			PlayerDisplayName: p.DisplayName,
+			PlayerID:          ps.PlayerID,
+			PlayerDisplayName: ps.PlayerDisplayName,
 		})
 	}
 
