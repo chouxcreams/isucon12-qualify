@@ -579,13 +579,6 @@ func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID i
 			billingMap[vh.PlayerID] = "visitor"
 		}
 
-		// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
-		fl, err := flockByTenantID(tenantID)
-		if err != nil {
-			return nil, fmt.Errorf("error flockByTenantID: %w", err)
-		}
-		defer fl.Close()
-
 		// スコアを登録した参加者のIDを取得する
 		scoredPlayerIDs := []string{}
 		if err := tenantDB.SelectContext(
@@ -1105,6 +1098,12 @@ func competitionScoreHandler(c echo.Context) error {
 		})
 	}
 
+	// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
+	fl, err := flockByTenantID(v.tenantID)
+	if err != nil {
+		return fmt.Errorf("error flockByTenantID: %w", err)
+	}
+
 	if _, err := tenantDB.ExecContext(
 		ctx,
 		"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?",
@@ -1120,6 +1119,7 @@ func competitionScoreHandler(c echo.Context) error {
 	); err != nil {
 		return fmt.Errorf("error Insert player", err.Error())
 	}
+	fl.Close()
 
 	return c.JSON(http.StatusOK, SuccessResult{
 		Status: true,
@@ -1233,12 +1233,6 @@ func playerHandler(c echo.Context) error {
 		return fmt.Errorf("error Select competition: %w", err)
 	}
 
-	// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
-	fl, err := flockByTenantID(v.tenantID)
-	if err != nil {
-		return fmt.Errorf("error flockByTenantID: %w", err)
-	}
-	defer fl.Close()
 	psds := make([]PlayerScoreDetail, 0, len(cs))
 
 	for _, c := range cs {
@@ -1356,12 +1350,6 @@ func competitionRankingHandler(c echo.Context) error {
 		}
 	}
 
-	// player_scoreを読んでいるときに更新が走ると不整合が起こるのでロックを取得する
-	fl, err := flockByTenantID(v.tenantID)
-	if err != nil {
-		return fmt.Errorf("error flockByTenantID: %w", err)
-	}
-	defer fl.Close()
 	pss := []PlayerScoreRow{}
 	if err := tenantDB.SelectContext(
 		ctx,
